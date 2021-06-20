@@ -193,7 +193,9 @@ hepsret_stats(exp_hepsret, stat_type, neighbours);
 
 stat_type = 3; % for plotting unpleasant HEP
 [stats_hep, ftdata] = hepsret_stats(exp_hepsret, stat_type, neighbours);
-fprintf('p value of unpleasant word effect: %g\n', stats.posclusters(1).prob)
+
+fprintf('p value of unpleasant word effect: %g\n', ...
+    stats.posclusters(1).prob)
 
 %% 3.1.3 Plot topography of the effect in 3.1.2
 
@@ -249,19 +251,15 @@ stat_type = 12; % for stats on shuffled negative HEP
 
 %% try to do logistic regression on individual trials within subjects
 
-% hepsret_logistic_regression(exp_hepsret, stats, filename,...
-%     bef_aft_hep, trange_hep, bef_aft_hr,...
-%     blsub_flag, endorscutoff)
-% 
-% %%% doesn't work because of the extremity in bias
+nshuf = 250;
+learn_method = 3;
+bef_aft_hep = [-5 -.5]; % interval over which to evaluate the HEP
 
-%     %% do t-ttest of the cluster from stats to the currently analysed hrep.mat file
-%     stat_type = 2; % 1-pos HEP, 2-neg HEP, 3-pos HR, 4-neg HR
-%     hepsret_t_hepdur(exp_hepsret, stats, stat_type)
-%
-%     %% do t-ttest of the cluster from stats to the currently analysed hrep.mat file
-%     stat_type = 4; % 1-pos HEP, 2-neg HEP, 3-pos HR, 4-neg HR
-%     hepsret_t_hepdur(exp_hepsret, stats, stat_type)
+
+[pc1,pc2] = hepsret_decode_selfendors(exp_hepsret, stats_hep, filename,...
+    bef_aft_hep, trange_hep, bef_aft_hr,...
+    blsub_flag, endorscutoff, nshuf, learn_method);
+
 
 %%
 %%
