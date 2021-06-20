@@ -242,39 +242,37 @@ end
 
 
 
-switch method
-    case {1, 2, 3}
-        for nt = 1:ntr
-            test = indices==nt; train = ~test;
+%     case {1, 2, 3}
+for nt = 1:ntr
+    test = indices==nt; train = ~test;
+    
+    switch method
+        case 1
             
-            switch method
-                case 1
-                    
-                    b = glmfit(X(train,:),Y(train),...
-                        'binomial','logit'); % Logistic regression
-                    fit(nt) = round(glmval(b,X(test,:),'logit')');
-                    
-                case 2
-                    
-                    Mdl = fitclinear(X(train,:),Y(train), 'Learner', 'logistic');
-                    fit(nt) = predict(Mdl,X(test,:));
-                    
-                    
-                case 3
-                    
-                    Mdl = fitclinear(X(train,:),Y(train), 'Learner', 'svm');
-                    fit(nt) = predict(Mdl,X(test,:));
-                    
-                    
-                case 4
-                    % better do 1, 4 takes longer
-                    
-                    b = fitglm(X(train,:),Y(train), 'link', 'logit',...
-                        'Distribution', 'binomial');
-                    fit(nt) = round(predict(b, X(test,:)));
-                    
-            end
-        end
-    case 4
+            b = glmfit(X(train,:),Y(train),...
+                'binomial','logit'); % Logistic regression
+            fit(nt) = round(glmval(b,X(test,:),'logit')');
+            
+        case 2
+            
+            Mdl = fitclinear(X(train,:),Y(train), 'Learner', 'logistic');
+            fit(nt) = predict(Mdl,X(test,:));
+            
+            
+        case 3
+            
+            Mdl = fitclinear(X(train,:),Y(train), 'Learner', 'svm');
+            fit(nt) = predict(Mdl,X(test,:));
+            
+            
+        case 4
+            % better do 1: 4 takes much longer
+            
+            b = fitglm(X(train,:),Y(train), 'link', 'logit',...
+                'Distribution', 'binomial');
+            fit(nt) = round(predict(b, X(test,:)));
+            
+    end
+    %         end
 end
 end
