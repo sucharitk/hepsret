@@ -130,8 +130,12 @@ bef_aft_hep = [-5 0];
     bef_aft_hep, trange_hep, endorscutoff);
 selsubj = exp_hepsret.data(val_subj);
 subjage = [selsubj.subj_age];
+subjed = [selsubj.subj_edu];
+
 fprintf('age of selected participants: mean=%g, stdev=%g\n', ...
     mean(subjage), std(subjage))
+fprintf('age of selected participants: mean=%g, stdev=%g\n', ...
+    nanmean(subjed), nanstd(subjed))
 fprintf('number of females: %g\n', sum([selsubj.subj_sex]))
 
 hbt2 = reshape(hbtrials, [12 4]);
@@ -157,7 +161,7 @@ smooth_erp = 0; % in ms
 blsub_flag = true; % subtract baseline for ERP and HEP
 avg_chans = false; % don't average channels, return them separately
 
-endorscutoff = .9; %%% winning bias criterion based on simluations
+endorscutoff = .94; %%% winning bias criterion based on simluations
 
 shuffle_peaks = 0;
 
@@ -180,7 +184,7 @@ hepsret_hep(exp_hepsret, selchans, filename, ...
 cd(exp_hepsret.session_dir)
 load('chanlocs.mat')
 neighbourdist = 50;
-neighbours = neighbours_struct(chanlocs, neighbourdist);
+neighbours = neighbours_struct(chanlocs32, neighbourdist);
 
 %% 3.1.1 Cluster-based stats - Pleasant word PEP
 
@@ -195,7 +199,7 @@ stat_type = 3; % for plotting unpleasant HEP
 [stats_hep, ftdata] = hepsret_stats(exp_hepsret, stat_type, neighbours);
 
 fprintf('p value of unpleasant word effect: %g\n', ...
-    stats.posclusters(1).prob)
+    stats_hep.posclusters(1).prob)
 
 %% 3.1.3 Plot topography of the effect in 3.1.2
 
@@ -249,16 +253,6 @@ hepsret_t_hepdur(exp_hepsret, stats_hep, stat_type, reg_or_shuf);
 stat_type = 12; % for stats on shuffled negative HEP
 [stats_shuf, ftdata] = hepsret_stats(exp_hepsret, stat_type, neighbours);
 
-%% try to do logistic regression on individual trials within subjects
-
-nshuf = 250;
-learn_method = 3;
-bef_aft_hep = [-5 -.5]; % interval over which to evaluate the HEP
-
-
-[pc1,pc2] = hepsret_decode_selfendors(exp_hepsret, stats_hep, filename,...
-    bef_aft_hep, trange_hep, bef_aft_hr,...
-    blsub_flag, endorscutoff, nshuf, learn_method);
 
 
 %%
@@ -383,10 +377,11 @@ plot(interv_mid_dur, probdetect(:,2), '-', 'LineWidth', 1.5)
 
 %%% doesn't seem to be the case
 
+
 %%
-%% 
+%% Do post stimulus HEP analysis
 %%
-%% 3.4.1 - Do post stimulus HEP analysis
+%% 4.4.1 - Do post stimulus HEP analysis
 
 bef_aft_hep = [0 5]; % look at post-stimulus HEPs
 
@@ -395,21 +390,77 @@ hepsret_hep(exp_hepsret, selchans, filename, ...
     blsub_flag, endorscutoff,...
     do_plots);
     
-%% 3.4.2 statistics  post stimulus HEPs for Pleasant-Self vs. Pleasant-Nonself
+%% 4.4.2 statistics  post stimulus HEPs for Pleasant-Self vs. Pleasant-Nonself
+
 stat_type = 8; % for positive HEP
 alpha = 0.025;
 
 hepsret_stats(exp_hepsret, stat_type, neighbours, alpha);
 %%% no significant clusters for pos hep for yes v. no
 
-%% 3.4.3 statistics on post stimulus HEPs for UnPleasant-Self vs. UnPleasant-Nonself
+%% 4.4.3 statistics on post stimulus HEPs for UnPleasant-Self vs. UnPleasant-Nonself
 
 stat_type = 9; % for negative HEP
 hepsret_stats(exp_hepsret, stat_type, neighbours, alpha);
 %%% no significant clusters for pos hep for yes v. no
 
-%% 3.4.4 stats on post HEPs between pos and neg (not by endorsement)
+%% 4.4.4 stats on post HEPs between pos and neg (not by endorsement)
 
 stat_type = 10; % for plotting positive HEP
 
 hepsret_stats(exp_hepsret, stat_type, neighbours, alpha);
+
+
+
+
+%%
+%% Decoding (machine learning) analyses
+%%
+
+%% 5.1 - Use logistic regression to predict individual trial endorsements from PEP
+
+nshuf = 20;
+learn_method = 6;
+bef_aft_hep = [-4 -1]; % interval over which to evaluate the HEP
+shuf_chans = false; % control analysis - shuffle the channels to see if the effect is present when not using the significant cluster 
+endorscutoff = .94;
+[pc_cor,pc_shuf] = hepsret_decode_selfendors(exp_hepsret, stats_hep, filename,...
+    bef_aft_hep, trange_hep, bef_aft_hr,...
+    blsub_flag, endorscutoff, shuf_chans, nshuf, learn_method);
+% 
+
+
+mpc_shuf = mean(pc_shuf,2);
+[bci,bstat] = bootci(1e5,@mean,pc_cor-mpc_shuf);
+sum(bstat<0)/1e5
+
+if size(pc_cor,2)>1, pc_cor_temp = pc_cor; pc_cor = mean(pc_cor,2); end
+
+fprintf('\npercent correct: effect=%g, shuffled=%g\n',...
+    mean(pc_cor), mean(mpc_shuf))
+
+%%
+save('hepsret_datafiles/ml_percent_correct', 'pc_cor', 'pc_shuf', ...
+    'nshuf', 'bef_aft_hep', 'learn_method')
+
+%% Plot
+
+load('hepsret_datafiles/ml_percent_correct')
+
+fprintf('percent correct: effect=%g, shuffled=%g\n',...
+    mean(pc_cor), mean(mpc_shuf))
+
+nsubj = numel(pc_cor);
+
+difpc = -diff([pc_cor'; mpc_shuf']);
+signrank(difpc1)
+
+fprintf('percent correct shuffled channels: effect=%g, shuffled=%g\n',...
+    mean(pc_cor), mean(pc_cor_chanshuf))
+
+ws_se = std([ pc_cor, mpc_shuf]-mean([pc_cor, mpc_shuf],2))/sqrt(nsubj);
+figure
+bar([1 2], [ mean(pc_cor), mean(mpc_shuf)])
+hold on,errorbar([1 2], [ mean(pc_cor), mean(mpc_shuf)],...
+     ws_se)
+ax=axis; ax(3:4)=[.7 .80]; axis(ax)
